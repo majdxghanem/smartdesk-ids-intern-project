@@ -9,7 +9,14 @@ function getStoredRole(user) {
 function ProtectedRoute({ children, allowedRoles }) {
   const token = localStorage.getItem("token");
   const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
+  let user = null;
+
+  try {
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }
   const role = getStoredRole(user);
 
   if (!token || !user) {

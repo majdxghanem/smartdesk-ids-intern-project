@@ -325,6 +325,7 @@ function Profile() {
                     />
                   </label>
                 </div>
+                <p className="profile-password-guidance">Use at least 8 characters with uppercase, lowercase, and a number.</p>
 
                 <button
                   type="submit"

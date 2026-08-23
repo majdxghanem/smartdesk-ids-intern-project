@@ -14,21 +14,39 @@ import CreateUser from "./pages/CreateUser";
 import EditUser from "./pages/EditUser";
 import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
+import ForgotPassword from "./pages/ForgotPassword";
+import NotFound from "./pages/NotFound";
+import ReferenceData from "./pages/ReferenceData";
 import ProtectedRoute from "./components/ProtectedRoute";
+
+const authenticated = (page, allowedRoles) => (
+  <ProtectedRoute allowedRoles={allowedRoles}>{page}</ProtectedRoute>
+);
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/tickets" element={<Tickets />} />
-      <Route path="/create-ticket" element={<CreateTicket />} />
-      <Route path="/tickets/edit/:id" element={<EditTicket />} />
-      <Route path="/tickets/assign/:id" element={<Assignmen />} />
-      <Route path="/tickets/:id" element={<TicketDetails />} />
-      <Route path="/tickets/:id/comments" element={<TicketComments />} />
-      <Route path="/tickets/:id/activity" element={<TicketActivity />} />
-      <Route path="/reports" element={<Reports />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/dashboard" element={authenticated(<Dashboard />)} />
+      <Route path="/tickets" element={authenticated(<Tickets />)} />
+      <Route
+        path="/create-ticket"
+        element={authenticated(<CreateTicket />, ["Admin", "Employee"])}
+      />
+      <Route path="/tickets/edit/:id" element={authenticated(<EditTicket />)} />
+      <Route
+        path="/tickets/assign/:id"
+        element={authenticated(<Assignmen />, ["Admin", "Manager"])}
+      />
+      <Route path="/tickets/:id" element={authenticated(<TicketDetails />)} />
+      <Route path="/tickets/:id/comments" element={authenticated(<TicketComments />)} />
+      <Route path="/tickets/:id/activity" element={authenticated(<TicketActivity />)} />
+      <Route
+        path="/reports"
+        element={authenticated(<Reports />, ["Admin", "Manager"])}
+      />
+      <Route path="/settings/reference" element={authenticated(<ReferenceData />, ["Admin"])} />
 
       <Route
         path="/users"
@@ -62,6 +80,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

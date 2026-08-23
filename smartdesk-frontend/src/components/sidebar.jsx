@@ -7,7 +7,8 @@ import {
     FaUsers,
     FaChartBar,
     FaUser,
-    FaSignOutAlt
+    FaSignOutAlt,
+    FaCog
 } from "react-icons/fa";
 
 import api from "../services/api";
@@ -53,7 +54,11 @@ function Sidebar() {
 
         <aside className="sidebar">
             <Link className="sidebar-brand" to="/dashboard">
-                <span className="sidebar-brand-mark">SD</span>
+                <img
+                    className="sidebar-brand-mark"
+                    src="/smartdesk-logo.svg"
+                    alt="SmartDesk"
+                />
                 <span className="sidebar-brand-copy">
                     <strong>SmartDesk</strong>
                     <small>Service workspace</small>
@@ -123,6 +128,15 @@ function Sidebar() {
                         </NavLink>
                     </li>
 
+                )}
+
+                {role === "Admin" && (
+                    <li>
+                        <NavLink to="/settings/reference" className={navClassName}>
+                            <FaCog />
+                            <span>Service Settings</span>
+                        </NavLink>
+                    </li>
                 )}
 
                 {(role === "Admin" || role === "Manager") && (

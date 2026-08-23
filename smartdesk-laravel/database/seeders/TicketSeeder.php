@@ -284,6 +284,11 @@ class TicketSeeder extends Seeder
         ];
 
         foreach ($tickets as &$ticket) {
+            // Legacy fixture value 3 referred to an employee, not an agent.
+            if ($ticket['assignedto'] === 3) {
+                $ticket['assignedto'] = 1;
+            }
+
             $isAssigned = $ticket['assignedto'] !== null;
 
             $ticket['statusid'] = $isAssigned

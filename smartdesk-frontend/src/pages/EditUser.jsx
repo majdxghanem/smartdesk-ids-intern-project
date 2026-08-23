@@ -167,7 +167,7 @@ function EditUser() {
 
                 <div className="user-field-full user-form-divider">
                   <strong>Reset Password</strong>
-                  <span>Leave these fields empty to keep the current password.</span>
+                  <span>Leave empty to keep it, or use 8+ characters with mixed case and a number.</span>
                 </div>
 
                 <label className="user-field">

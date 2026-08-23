@@ -149,7 +149,7 @@ function CreateUser() {
                   value={form.password}
                   onChange={updateField}
                   minLength="8"
-                  placeholder="At least 8 characters"
+                  placeholder="8+ chars, mixed case, number"
                   required
                 />
               </label>

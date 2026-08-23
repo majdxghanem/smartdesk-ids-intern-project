@@ -4,7 +4,11 @@ import {
     FaArrowLeft,
     FaCheckCircle,
     FaComments,
+    FaDownload,
     FaHistory,
+    FaPaperclip,
+    FaTrash,
+    FaUpload,
     FaUndo
 } from "react-icons/fa";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -19,6 +23,12 @@ function TicketDetails() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [ticketAction, setTicketAction] = useState("");
+    const [attachments, setAttachments] = useState([]);
+    const [attachmentFile, setAttachmentFile] = useState(null);
+    const [attachmentAction, setAttachmentAction] = useState("");
+    const [attachmentError, setAttachmentError] = useState("");
+    const [attachmentsLoading, setAttachmentsLoading] = useState(true);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     const storedUser = localStorage.getItem("user");
     const user = storedUser ? JSON.parse(storedUser) : null;
@@ -56,6 +66,23 @@ function TicketDetails() {
         return () => {
             isActive = false;
         };
+    }, [id]);
+
+    useEffect(() => {
+        let isActive = true;
+
+        api.get(`/tickets/${id}/attachments`)
+            .then((response) => {
+                if (isActive) setAttachments(response.data.attachments || []);
+            })
+            .catch((requestError) => {
+                if (isActive) setAttachmentError(requestError.response?.data?.message || "Failed to load attachments.");
+            })
+            .finally(() => {
+                if (isActive) setAttachmentsLoading(false);
+            });
+
+        return () => { isActive = false; };
     }, [id]);
 
     function formatDate(value) {
@@ -114,13 +141,84 @@ function TicketDetails() {
         }
     }
 
+    async function uploadAttachment(event) {
+        event.preventDefault();
+        if (!attachmentFile) return;
+        const form = event.currentTarget;
+        setAttachmentAction("upload");
+        setAttachmentError("");
+        setUploadProgress(0);
+
+        const formData = new FormData();
+        formData.append("file", attachmentFile);
+
+        try {
+            const response = await api.post(`/tickets/${id}/attachments`, formData, {
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total) {
+                        setUploadProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
+                    }
+                },
+            });
+            setAttachments((current) => [response.data.attachment, ...current]);
+            setAttachmentFile(null);
+            form.reset();
+        } catch (requestError) {
+            const errors = requestError.response?.data?.errors;
+            setAttachmentError(errors ? Object.values(errors).flat()[0] : requestError.response?.data?.message || "Upload failed.");
+        } finally {
+            setAttachmentAction("");
+            setUploadProgress(0);
+        }
+    }
+
+    async function downloadAttachment(attachment) {
+        setAttachmentAction(`download-${attachment.id}`);
+        setAttachmentError("");
+        try {
+            const response = await api.get(`/attachments/${attachment.id}/download`, { responseType: "blob" });
+            const url = window.URL.createObjectURL(response.data);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = attachment.filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        } catch {
+            setAttachmentError("The attachment could not be downloaded.");
+        } finally {
+            setAttachmentAction("");
+        }
+    }
+
+    async function removeAttachment(attachment) {
+        if (!window.confirm(`Remove ${attachment.filename}?`)) return;
+        setAttachmentAction(`delete-${attachment.id}`);
+        setAttachmentError("");
+        try {
+            await api.delete(`/attachments/${attachment.id}`);
+            setAttachments((current) => current.filter((item) => item.id !== attachment.id));
+        } catch (requestError) {
+            setAttachmentError(requestError.response?.data?.message || "The attachment could not be removed.");
+        } finally {
+            setAttachmentAction("");
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (!bytes) return "0 KB";
+        if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
     const canCompleteTicket =
         role === "IT Support Agent" &&
         Number(ticket?.assignedto) === Number(user?.id) &&
         ticket?.status?.status === "In Progress";
 
     const canOpenComments =
-        role === "Admin" ||
+        role === "Admin" || role === "Manager" ||
         (role === "Employee" &&
             Number(ticket?.createdby) === Number(user?.id)) ||
         (role === "IT Support Agent" &&
@@ -163,6 +261,13 @@ function TicketDetails() {
                                     #{ticket.id}
                                 </span>
                             </div>
+
+                            {ticket.returned_to && (
+                                <div className="ticket-detail-item">
+                                    <span className="ticket-detail-label">Returned To</span>
+                                    <span className="ticket-detail-value">{formatUser(ticket.returned_to, "Review queue")}</span>
+                                </div>
+                            )}
 
                             <div className="ticket-detail-item">
                                 <span className="ticket-detail-label">
@@ -266,6 +371,32 @@ function TicketDetails() {
                             </div>
                         </div>
                     </div>
+
+                    <section className="ticket-attachments-card">
+                        <div className="ticket-attachments-heading">
+                            <div><span><FaPaperclip /> Supporting files</span><p>PDF, Office, image, text, CSV, or ZIP files up to 10 MB.</p></div>
+                            <span className="ticket-attachment-count">{attachments.length}</span>
+                        </div>
+
+                        <form className="ticket-attachment-upload" onSubmit={uploadAttachment}>
+                            <input type="file" onChange={(event) => setAttachmentFile(event.target.files?.[0] || null)} accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip" />
+                            <button type="submit" disabled={!attachmentFile || attachmentAction === "upload"}><FaUpload /> {attachmentAction === "upload" ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : "..."}` : "Upload file"}</button>
+                        </form>
+
+                        {attachmentError && <div className="ticket-details-error" role="alert">{attachmentError}</div>}
+                        <div className="ticket-attachment-list">
+                            {attachmentsLoading && <p className="ticket-attachment-empty">Loading supporting files...</p>}
+                            {!attachmentsLoading && attachments.length === 0 && <p className="ticket-attachment-empty">No supporting files have been added.</p>}
+                            {attachments.map((attachment) => (
+                                <div className="ticket-attachment-row" key={attachment.id}>
+                                    <FaPaperclip />
+                                    <div><strong>{attachment.filename}</strong><span>{formatFileSize(attachment.filesize)} · {formatUser(attachment.user, "Unknown uploader")} · {formatDate(attachment.date)}</span></div>
+                                    <button type="button" aria-label={`Download ${attachment.filename}`} onClick={() => downloadAttachment(attachment)} disabled={attachmentAction === `download-${attachment.id}`}><FaDownload /></button>
+                                    {(role === "Admin" || Number(attachment.userid) === Number(user?.id)) && <button className="attachment-delete" type="button" aria-label={`Remove ${attachment.filename}`} onClick={() => removeAttachment(attachment)} disabled={attachmentAction === `delete-${attachment.id}`}><FaTrash /></button>}
+                                </div>
+                            ))}
+                        </div>
+                    </section>
 
                     <div className="ticket-details-actions">
                         {canCompleteTicket && (

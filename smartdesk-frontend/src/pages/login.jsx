@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import {
     FaCheckCircle,
     FaClock,
@@ -16,6 +16,7 @@ function Login() {
 
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
 const [email, setEmail] = useState("");
 
@@ -24,6 +25,11 @@ const [password, setPassword] = useState("");
 const [loading, setLoading] = useState(false);
 
 const [error, setError] = useState("");
+
+    if (localStorage.getItem("token") && localStorage.getItem("user")) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
 const handleLogin = async (event) => {
 
     event?.preventDefault();
@@ -83,7 +89,11 @@ const handleLogin = async (event) => {
             <main className="login-shell">
                 <section className="login-intro">
                     <div className="login-brand">
-                        <span className="login-brand-mark">SD</span>
+                        <img
+                            className="login-brand-mark"
+                            src="/smartdesk-logo.svg"
+                            alt="SmartDesk"
+                        />
                         <div>
                             <strong>SmartDesk</strong>
                             <small>IT service workspace</small>
@@ -114,6 +124,9 @@ const handleLogin = async (event) => {
                     </div>
 
                     <form className="login-form" onSubmit={handleLogin}>
+                        {searchParams.get("session") === "expired" && (
+                            <div className="login-notice">Your session expired. Please sign in again.</div>
+                        )}
                         <label>
                             <span>Email address</span>
                             <div className="login-input-wrap">
@@ -151,6 +164,10 @@ const handleLogin = async (event) => {
                                 </button>
                             </div>
                         </label>
+
+                        <Link className="login-forgot-link" to="/forgot-password">
+                            Forgot your password?
+                        </Link>
 
                         {error && <div className="login-error">{error}</div>}
 

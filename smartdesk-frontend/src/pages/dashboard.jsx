@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   FaCheckCircle,
   FaClock,
@@ -118,6 +119,7 @@ function Dashboard() {
   }
 
   const activities = dashboard.activityLog || [];
+  const recentTickets = dashboard.recentTickets || [];
 
   return (
     <DashboardLayout>
@@ -161,6 +163,16 @@ function Dashboard() {
             color="#7C3AED"
           />
         </div>
+
+        <section className="dashboard-recent-card">
+          <div className="dashboard-activity-header">
+            <div><div className="dashboard-activity-title"><FaTicketAlt /><h2>Recent Tickets</h2></div><p>The five newest requests in your current workspace.</p></div>
+            <Link className="dashboard-view-all" to="/tickets">View all tickets</Link>
+          </div>
+          <div className="dashboard-recent-table-wrap">
+            <table className="dashboard-recent-table"><thead><tr><th>Ticket</th><th>Category</th><th>Priority</th><th>Status</th><th>Created</th></tr></thead><tbody>{recentTickets.length === 0 ? <tr><td colSpan="5">No tickets are available yet.</td></tr> : recentTickets.map((ticket) => <tr key={ticket.id}><td><Link to={`/tickets/${ticket.id}`}>#{ticket.id} · {ticket.title}</Link></td><td>{ticket.category?.category || "Not set"}</td><td>{ticket.priority?.priority || "Not set"}</td><td>{ticket.status?.status || "Not set"}</td><td>{formatActivityDate(ticket.creation_date)}</td></tr>)}</tbody></table>
+          </div>
+        </section>
 
         {role === "Admin" && (
           <section className="dashboard-activity-card">

@@ -10,18 +10,41 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('role')
+        $query = User::with('role');
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->query('search'));
+            $query->where(function ($userQuery) use ($search) {
+                $userQuery->where('firstname', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('role', fn ($roleQuery) => $roleQuery->where('role', 'like', "%{$search}%"));
+            });
+        }
+
+        $users = $query
             ->orderBy('firstname')
             ->orderBy('id')
-            ->get();
+            ->paginate(min(max((int) $request->query('per_page', 20), 5), 100));
 
         return response()->json([
-            'users' => $users,
+            'users' => $users->items(),
+            'pagination' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'total' => $users->total(),
+            ],
+            'summary' => [
+                'total' => User::count(),
+                'active' => User::where('isbanned', false)->count(),
+                'banned' => User::where('isbanned', true)->count(),
+            ],
         ]);
     }
 
@@ -53,7 +76,7 @@ class UserController extends Controller
             'firstname' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
             'roleid' => ['required', 'integer', 'exists:roles,id'],
         ]);
 
@@ -105,7 +128,7 @@ class UserController extends Controller
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
             'roleid' => ['required', 'integer', 'exists:roles,id'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'password' => ['nullable', 'confirmed', Password::min(8)->mixedCase()->numbers()],
         ]);
 
         $user->fill([
@@ -186,6 +209,7 @@ class UserController extends Controller
         $hasRelatedTicketData = DB::table('tickets')
             ->where('createdby', $user->id)
             ->orWhere('assignedto', $user->id)
+            ->orWhere('returnedto', $user->id)
             ->exists()
             || DB::table('ticket_comments')->where('userid', $user->id)->exists()
             || DB::table('ticket_attachments')->where('userid', $user->id)->exists()

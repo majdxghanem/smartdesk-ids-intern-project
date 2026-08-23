@@ -328,6 +328,38 @@
   text-align: center !important;
 }
 
+.ticket-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 17px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.ticket-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ticket-pagination button {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-soft);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.ticket-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .assignment-back-btn {
   padding: 10px 15px;
   border: 1px solid var(--border-strong);
@@ -450,6 +482,147 @@
   flex-wrap: wrap;
   gap: 9px;
   margin-top: 18px;
+}
+
+.ticket-attachments-card {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.ticket-attachments-heading,
+.ticket-attachment-upload,
+.ticket-attachment-row {
+  display: flex;
+  align-items: center;
+}
+
+.ticket-attachments-heading {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ticket-attachments-heading > div > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.ticket-attachments-heading p,
+.ticket-attachment-row span,
+.ticket-attachment-empty {
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.ticket-attachment-count {
+  display: grid;
+  min-width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(37, 99, 235, 0.13);
+  color: #8bb6ff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ticket-attachment-upload {
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+
+.ticket-attachment-upload input {
+  min-width: 0;
+  flex: 1;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+.ticket-attachment-upload input::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface-hover);
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.ticket-attachment-upload button,
+.ticket-attachment-row button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+}
+
+.ticket-attachment-upload button {
+  padding: 9px 12px;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.ticket-attachment-list {
+  margin-top: 13px;
+}
+
+.ticket-attachment-row {
+  gap: 11px;
+  padding: 11px 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ticket-attachment-row > svg {
+  color: #6c9cf2;
+}
+
+.ticket-attachment-row > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.ticket-attachment-row strong,
+.ticket-attachment-row span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-attachment-row strong {
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+.ticket-attachment-row button {
+  width: 31px;
+  height: 31px;
+  background: var(--surface-hover);
+  color: #8db7ff;
+}
+
+.ticket-attachment-row .attachment-delete {
+  color: #fb7185;
+}
+
+.ticket-attachment-empty {
+  padding: 18px 0 4px;
+  text-align: center;
 }
 
 .ticket-page-btn {

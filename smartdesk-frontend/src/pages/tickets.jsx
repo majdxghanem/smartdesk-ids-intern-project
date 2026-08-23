@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     FaEdit,
@@ -6,7 +6,8 @@ import {
     FaEye,
     FaUserPlus,
     FaPlus,
-    FaSortAmountDown
+    FaSortAmountDown,
+    FaUndo
 } from "react-icons/fa";
 import DashboardLayout from "../layouts/DashboardLayout";
 import api from "../services/api";
@@ -23,8 +24,10 @@ function Tickets() {
     const [categoryId, setCategoryId] = useState("");
     const [statusId, setStatusId] = useState("");
     const [selectedDate, setSelectedDate] = useState("");
-    const [sortNewest, setSortNewest] = useState(false);
+    const [sortNewest, setSortNewest] = useState(true);
     const [ticketView, setTicketView] = useState("default");
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
 
     const storedUser = localStorage.getItem("user");
     const user = storedUser ? JSON.parse(storedUser) : null;
@@ -36,10 +39,6 @@ function Tickets() {
     useEffect(() => {
         loadFilterOptions();
     }, []);
-
-    useEffect(() => {
-        loadTickets();
-    }, [ticketView, categoryId, statusId, selectedDate, sortNewest]);
 
     async function loadFilterOptions() {
         try {
@@ -55,13 +54,16 @@ function Tickets() {
         }
     }
 
-    async function loadTickets() {
+    const loadTickets = useCallback(async () => {
         setLoading(true);
 
         try {
-            const response = await api.get("/tickets", {
+            const archived = ticketView === "archived";
+            const response = await api.get(archived ? "/tickets/archived" : "/tickets", {
                 params: {
-                    t: Date.now(),
+                    page,
+                    per_page: 20,
+                    search: search || undefined,
                     assigned:
                         ticketView === "unassigned"
                             ? "unassigned"
@@ -71,36 +73,56 @@ function Tickets() {
                     categoryid: categoryId || undefined,
                     statusid: statusId || undefined,
                     date: selectedDate || undefined,
-                    sort: sortNewest ? "newest" : undefined
+                    sort: sortNewest ? "newest" : "oldest"
                 }
             });
 
-            setTickets(response.data.tickets);
+            setTickets(archived ? response.data.data || [] : response.data.tickets || []);
+            setPagination(archived ? {
+                current_page: response.data.current_page || 1,
+                last_page: response.data.last_page || 1,
+                total: response.data.total || 0,
+            } : response.data.pagination || { current_page: 1, last_page: 1, total: 0 });
         } catch (error) {
             console.error(error);
             setTickets([]);
         } finally {
             setLoading(false);
         }
-    }
+    }, [categoryId, page, search, selectedDate, sortNewest, statusId, ticketView]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(loadTickets, search ? 350 : 0);
+        return () => window.clearTimeout(timer);
+    }, [loadTickets, search]);
 
     async function deleteTicket(id) {
-        const confirmDelete = window.confirm(
-            "Are you sure you want to delete this ticket?"
+        const confirmArchive = window.confirm(
+            "Archive this ticket? It will leave active queues but can be restored later."
         );
 
-        if (!confirmDelete) return;
+        if (!confirmArchive) return;
 
         try {
             await api.delete(`/tickets/${id}`);
-            alert("Ticket deleted successfully.");
+            alert("Ticket archived successfully.");
             loadTickets();
         } catch (error) {
             console.error(error);
             alert(
                 error.response?.data?.message ||
-                "Failed to delete ticket."
+                "Failed to archive ticket."
             );
+        }
+    }
+
+    async function restoreTicket(id) {
+        try {
+            const response = await api.put(`/tickets/${id}/restore`);
+            alert(response.data.message);
+            loadTickets();
+        } catch (error) {
+            alert(error.response?.data?.message || "Failed to restore ticket.");
         }
     }
 
@@ -121,6 +143,8 @@ function Tickets() {
         setCategoryId("");
         setStatusId("");
         setSelectedDate("");
+        setSearch("");
+        setPage(1);
     }
 
     const canEditTicket = (ticket) =>
@@ -129,13 +153,9 @@ function Tickets() {
         (role === "IT Support Agent" &&
             ticket.assignedto !== null &&
             Number(ticket.assignedto) === Number(user?.id)) ||
-        (role === "Employee" && ticket.assignedto === null);
+        (role === "Employee" && ticket.assignedto === null && ticket.returnedto === null);
 
     const hasActiveFilters = categoryId || statusId || selectedDate;
-
-    const filteredTickets = tickets.filter((ticket) =>
-        ticket.title.toLowerCase().includes(search.toLowerCase())
-    );
 
     return (
         <DashboardLayout>
@@ -194,6 +214,10 @@ function Tickets() {
                                 Returned Tickets
                             </button>
                         )}
+
+                        {role === "Admin" && (
+                            <button type="button" className={ticketView === "archived" ? "active" : ""} onClick={() => { setTicketView("archived"); setPage(1); }}>Archived</button>
+                        )}
                     </div>
                 )}
 
@@ -201,12 +225,12 @@ function Tickets() {
                     type="text"
                     placeholder="Search tickets..."
                     value={search}
-                    onChange={(event) => setSearch(event.target.value)}
+                    onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 />
 
                 <select
                     value={categoryId}
-                    onChange={(event) => setCategoryId(event.target.value)}
+                    onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}
                 >
                     <option value="">All Categories</option>
                     {categories.map((category) => (
@@ -218,7 +242,7 @@ function Tickets() {
 
                 <select
                     value={statusId}
-                    onChange={(event) => setStatusId(event.target.value)}
+                    onChange={(event) => { setStatusId(event.target.value); setPage(1); }}
                 >
                     <option value="">All Statuses</option>
                     {statuses.map((status) => (
@@ -233,17 +257,17 @@ function Tickets() {
                     <input
                         type="date"
                         value={selectedDate}
-                        onChange={(event) => setSelectedDate(event.target.value)}
+                        onChange={(event) => { setSelectedDate(event.target.value); setPage(1); }}
                     />
                 </label>
 
                 <button
                     type="button"
                     className={`sort-newest-btn ${sortNewest ? "active" : ""}`}
-                    onClick={() => setSortNewest((current) => !current)}
+                    onClick={() => { setSortNewest((current) => !current); setPage(1); }}
                     aria-pressed={sortNewest}
                 >
-                    <FaSortAmountDown /> Newest to Oldest
+                    <FaSortAmountDown /> {sortNewest ? "Newest first" : "Oldest first"}
                 </button>
 
                 {hasActiveFilters && (
@@ -275,44 +299,44 @@ function Tickets() {
                         </thead>
 
                         <tbody>
-                            {filteredTickets.length === 0 ? (
+                            {tickets.length === 0 ? (
                                 <tr>
                                     <td className="ticket-empty" colSpan="7">
                                         No tickets match the selected filters.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredTickets.map((ticket) => (
+                                tickets.map((ticket) => (
                                     <tr key={ticket.id}>
                                         <td>{ticket.id}</td>
                                         <td>{ticket.title}</td>
-                                        <td>{ticket.category.category}</td>
+                                        <td>{ticket.category?.category || "Not set"}</td>
                                         <td>
                                             <span
-                                                className={`badge ${ticket.priority.priority.toLowerCase()}`}
+                                                className={`badge ${(ticket.priority?.priority || "").toLowerCase()}`}
                                             >
-                                                {ticket.priority.priority}
+                                                {ticket.priority?.priority || "Not set"}
                                             </span>
                                         </td>
                                         <td>
                                             <span
                                                 className={`badge ${
-                                                    ticket.status.status === "Open"
+                                                    ticket.status?.status === "Open"
                                                         ? "open"
-                                                        : ticket.status.status === "In Progress"
+                                                        : ticket.status?.status === "In Progress"
                                                         ? "progress"
-                                                        : ticket.status.status === "Returned"
+                                                        : ticket.status?.status === "Returned"
                                                         ? "returned"
                                                         : "closed"
                                                 }`}
                                             >
-                                                {ticket.status.status}
+                                                {ticket.status?.status || "Not set"}
                                             </span>
                                         </td>
-                                        <td>{ticket.creator.firstname}</td>
+                                        <td>{ticket.creator?.firstname || ticket.creator?.username || "Unknown"}</td>
                                         <td>
                                             <div className="actions">
-                                                {!(
+                                                {ticketView !== "archived" && !(
                                                     role === "IT Support Agent" &&
                                                     ticket.assignedto === null
                                                 ) && (
@@ -329,7 +353,7 @@ function Tickets() {
                                                     </button>
                                                 )}
 
-                                                {canEditTicket(ticket) && (
+                                                {ticketView !== "archived" && canEditTicket(ticket) && (
                                                     <button
                                                         className="action-btn edit"
                                                         title="Edit"
@@ -341,20 +365,20 @@ function Tickets() {
                                                     </button>
                                                 )}
 
-                                                {role === "Admin" && (
+                                                {role === "Admin" && ticketView !== "archived" && (
                                                     <button
                                                         className="action-btn delete"
-                                                        title="Delete"
+                                                        title="Archive"
                                                         onClick={() => deleteTicket(ticket.id)}
                                                     >
                                                         <FaTrash />
                                                     </button>
                                                 )}
 
-                                                {(role === "Admin" ||
+                                                {ticketView !== "archived" && (role === "Admin" ||
                                                     role === "Manager" ||
                                                     role === "IT Support Agent") &&
-                                                    (ticket.assignedto === null ||
+                                                    ((ticket.assignedto === null && ticket.returnedto === null) ||
                                                         ((role === "Admin" ||
                                                             role === "Manager") &&
                                                             ticketView === "returned" &&
@@ -379,6 +403,10 @@ function Tickets() {
                                                             <FaUserPlus />
                                                         </button>
                                                     )}
+
+                                                {role === "Admin" && ticketView === "archived" && (
+                                                    <button className="action-btn assign" title="Restore" onClick={() => restoreTicket(ticket.id)}><FaUndo /></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -386,6 +414,16 @@ function Tickets() {
                             )}
                         </tbody>
                     </table>
+                    {pagination.last_page > 1 && (
+                        <div className="ticket-pagination">
+                            <span>{pagination.total} tickets</span>
+                            <div>
+                                <button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button>
+                                <span>Page {pagination.current_page} of {pagination.last_page}</span>
+                                <button type="button" disabled={page >= pagination.last_page} onClick={() => setPage((current) => current + 1)}>Next</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </DashboardLayout>

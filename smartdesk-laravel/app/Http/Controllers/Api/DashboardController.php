@@ -86,8 +86,9 @@ class DashboardController extends Controller
         $activities = collect();
 
         $tickets = Ticket::with(["creator.role", "assignedUser.role"])
-            ->orderBy("creation_date")
-            ->orderBy("id")
+            ->orderByDesc("creation_date")
+            ->orderByDesc("id")
+            ->take(100)
             ->get();
 
         foreach ($tickets as $ticket) {
@@ -103,8 +104,9 @@ class DashboardController extends Controller
         }
 
         $logs = ActivityLog::with(["ticket", "user.role"])
-            ->orderBy("date")
-            ->orderBy("id")
+            ->orderByDesc("date")
+            ->orderByDesc("id")
+            ->take(100)
             ->get();
 
         foreach ($logs as $log) {
@@ -135,8 +137,9 @@ class DashboardController extends Controller
             "assignedBy.role",
             "assignedTo.role",
         ])
-            ->orderBy("assigneddate")
-            ->orderBy("id")
+            ->orderByDesc("assigneddate")
+            ->orderByDesc("id")
+            ->take(100)
             ->get();
 
         foreach ($histories as $history) {
@@ -170,8 +173,9 @@ class DashboardController extends Controller
         }
 
         $comments = TicketComment::with(["ticket", "user.role"])
-            ->orderBy("date")
-            ->orderBy("id")
+            ->orderByDesc("date")
+            ->orderByDesc("id")
+            ->take(100)
             ->get();
 
         foreach ($comments as $comment) {
@@ -251,6 +255,7 @@ class DashboardController extends Controller
                     ? $dateComparison
                     : strcmp((string) $second["id"], (string) $first["id"]);
             })
+            ->take(50)
             ->values();
     }
 

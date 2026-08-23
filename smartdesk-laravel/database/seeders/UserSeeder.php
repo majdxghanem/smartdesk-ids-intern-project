@@ -5,11 +5,31 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        $adminPassword = config('smartdesk.seed.admin_password');
+        $demoPassword = config('smartdesk.seed.demo_password');
+
+        if (! is_string($adminPassword) || strlen($adminPassword) < 12) {
+            throw new InvalidArgumentException(
+                'Set SMARTDESK_ADMIN_PASSWORD to a unique password of at least 12 characters before seeding.'
+            );
+        }
+
+        if ($demoPassword !== null && (! is_string($demoPassword) || strlen($demoPassword) < 12)) {
+            throw new InvalidArgumentException(
+                'SMARTDESK_DEMO_PASSWORD must be blank or contain at least 12 characters.'
+            );
+        }
+
+        $demoPasswordHash = Hash::make($demoPassword ?: Str::random(40));
+        $adminPasswordHash = Hash::make($adminPassword);
+
         User::insert([
 
            
@@ -18,7 +38,7 @@ class UserSeeder extends Seeder
                 'firstname' => 'John',
                 'username' => 'john',
                 'email' => 'john@smartdesk.com',
-                'password' => Hash::make('password'),
+                'password' => $demoPasswordHash,
                 'roleid' => 2,
                 'creationdate' => now(),
                 'isbanned' => 0,
@@ -29,7 +49,7 @@ class UserSeeder extends Seeder
                 'firstname' => 'Sarah',
                 'username' => 'sarah',
                 'email' => 'sarah@smartdesk.com',
-                'password' => Hash::make('password'),
+                'password' => $demoPasswordHash,
                 'roleid' => 2,
                 'creationdate' => now(),
                 'isbanned' => 0,
@@ -40,7 +60,7 @@ class UserSeeder extends Seeder
                 'firstname' => 'Ali',
                 'username' => 'ali',
                 'email' => 'ali@smartdesk.com',
-                'password' => Hash::make('password'),
+                'password' => $demoPasswordHash,
                 'roleid' => 3,
                 'creationdate' => now(),
                 'isbanned' => 0,
@@ -51,7 +71,7 @@ class UserSeeder extends Seeder
                 'firstname' => 'Maya',
                 'username' => 'maya',
                 'email' => 'maya@smartdesk.com',
-                'password' => Hash::make('password'),
+                'password' => $demoPasswordHash,
                 'roleid' => 3,
                 'creationdate' => now(),
                 'isbanned' => 0,
@@ -62,7 +82,7 @@ class UserSeeder extends Seeder
                 'firstname' => 'Rami',
                 'username' => 'rami',
                 'email' => 'rami@smartdesk.com',
-                'password' => Hash::make('password'),
+                'password' => $demoPasswordHash,
                 'roleid' => 3,
                 'creationdate' => now(),
                 'isbanned' => 1,
@@ -73,7 +93,7 @@ class UserSeeder extends Seeder
                 'firstname' => 'David',
                 'username' => 'david',
                 'email' => 'david@smartdesk.com',
-                'password' => Hash::make('password'),
+                'password' => $demoPasswordHash,
                 'roleid' => 4,
                 'creationdate' => now(),
                 'isbanned' => 0,
@@ -84,8 +104,19 @@ class UserSeeder extends Seeder
                 'firstname' => 'Nour',
                 'username' => 'nour',
                 'email' => 'nour@smartdesk.com',
-                'password' => Hash::make('password'),
+                'password' => $demoPasswordHash,
                 'roleid' => 4,
+                'creationdate' => now(),
+                'isbanned' => 0,
+                'banreason' => null,
+            ],
+
+            [
+                'firstname' => 'Administrator',
+                'username' => 'admin',
+                'email' => 'admin@smartdesk.local',
+                'password' => $adminPasswordHash,
+                'roleid' => 1,
                 'creationdate' => now(),
                 'isbanned' => 0,
                 'banreason' => null,

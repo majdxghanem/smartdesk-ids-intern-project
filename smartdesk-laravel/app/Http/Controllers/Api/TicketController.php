@@ -15,9 +15,13 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Requests\UpdateTicketRequest;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Services\NotificationService;
 
 class TicketController extends Controller
 {
+    public function __construct(private NotificationService $notifications)
+    {
+    }
     /**
      * Get all IT support agents for the assignment page.
      */
@@ -38,6 +42,7 @@ class TicketController extends Controller
         $agents = User::whereHas('role', function ($query) {
                 $query->where('role', 'IT Support Agent');
             })
+            ->where('isbanned', false)
             ->select('id', 'firstname', 'username', 'email')
             ->orderBy('firstname')
             ->get();
@@ -50,7 +55,7 @@ class TicketController extends Controller
     /**
      * Get tickets based on user role.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
     $user->load('role');
@@ -58,6 +63,7 @@ class TicketController extends Controller
     $query = Ticket::with([
         'creator',
         'assignedUser',
+        'returnedTo',
         'priority',
         'status',
         'category'
@@ -67,15 +73,15 @@ class TicketController extends Controller
 
         case 'Admin':
             if (request('assigned') === 'unassigned') {
-                $query->whereNull('assignedto');
+                $query->whereNull('assignedto')->whereNull('returnedto');
             } elseif (request('assigned') === 'returned') {
-                $query->where('assignedto', $user->id);
+                $query->whereNotNull('returnedto');
             }
             break;
 
         case 'Manager':
             if (request('assigned') === 'returned') {
-                $query->where('assignedto', $user->id);
+                $query->where('returnedto', $user->id);
             }
             break;
 
@@ -85,7 +91,7 @@ class TicketController extends Controller
 
         case 'IT Support Agent':
              if (request('assigned') === 'unassigned') {
-            $query->whereNull('assignedto');
+            $query->whereNull('assignedto')->whereNull('returnedto');
         } else {
             $query->where('assignedto', $user->id);
         }
@@ -114,13 +120,36 @@ class TicketController extends Controller
         $query->whereDate('creation_date', request('date'));
     }
 
-    if (request('sort') === 'newest') {
-        $query->orderByDesc('creation_date')
-            ->orderByDesc('id');
+    if ($request->filled('search')) {
+        $search = trim((string) $request->query('search'));
+        $query->where(function ($subquery) use ($search) {
+            $subquery->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+
+            if (ctype_digit($search)) {
+                $subquery->orWhere('id', (int) $search);
+            }
+        });
     }
 
+    if (request('sort', 'newest') === 'newest') {
+        $query->orderByDesc('creation_date')
+            ->orderByDesc('id');
+    } else {
+        $query->orderBy('creation_date')->orderBy('id');
+    }
+
+    $perPage = min(max((int) $request->query('per_page', 20), 5), 100);
+    $tickets = $query->paginate($perPage);
+
     return response()->json([
-        'tickets' => $query->get()
+        'tickets' => $tickets->items(),
+        'pagination' => [
+            'current_page' => $tickets->currentPage(),
+            'last_page' => $tickets->lastPage(),
+            'per_page' => $tickets->perPage(),
+            'total' => $tickets->total(),
+        ],
     ]);
     }
 
@@ -162,6 +191,8 @@ class TicketController extends Controller
 
             'assignedto' => null,
 
+            'returnedto' => null,
+
             'creation_date' => now(),
 
             'update_date' => null,
@@ -172,6 +203,19 @@ class TicketController extends Controller
 
             'description' => $request->description,
         ]);
+
+        $recipients = User::where('isbanned', false)
+            ->where('id', '!=', $user->id)
+            ->whereHas('role', fn ($query) => $query->whereIn('role', ['Admin', 'Manager']))
+            ->get();
+        $this->notifications->send(
+            $recipients,
+            'ticket_created',
+            "A new ticket #{$ticket->id} was created: {$ticket->title}",
+            $ticket,
+            "/tickets/{$ticket->id}",
+            "New SmartDesk ticket #{$ticket->id}"
+        );
 
         return response()->json([
             'message' => 'Ticket created successfully.',
@@ -189,6 +233,7 @@ class TicketController extends Controller
     $ticket = Ticket::with([
         'creator',
         'assignedUser',
+        'returnedTo',
         'priority',
         'status',
         'category'
@@ -249,13 +294,18 @@ public function update(UpdateTicketRequest $request, $id)
 
         case 'Admin':
 
+            if ($request->has('assignedto')) {
+                return response()->json([
+                    'message' => 'Use the assignment action to change ticket ownership.'
+                ], 422);
+            }
+
             $ticket->update([
                 'title' => $request->title ?? $ticket->title,
                 'description' => $request->description ?? $ticket->description,
                 'priorityid' => $request->priorityid ?? $ticket->priorityid,
                 'categoryid' => $request->categoryid ?? $ticket->categoryid,
                 'statusid' => $request->statusid ?? $ticket->statusid,
-                'assignedto' => $request->assignedto ?? $ticket->assignedto,
                 'update_date' => now(),
             ]);
 
@@ -357,13 +407,33 @@ public function update(UpdateTicketRequest $request, $id)
 
     }
 
+    if ($request->has('statusid')) {
+        $statusName = Status::find($ticket->statusid)?->status;
+        $ticket->closed_date = $statusName === 'Closed'
+            ? ($ticket->closed_date ?: now())
+            : null;
+        $ticket->save();
+    }
+
     $this->recordTicketChanges($ticket, $before, $user);
+
+    if ($this->ticketSnapshot($ticket) !== $before) {
+        $this->notifications->send(
+            $this->ticketRecipients($ticket, $user->id),
+            'ticket_updated',
+            "Ticket #{$ticket->id} was updated by {$this->activityUserName($user)}.",
+            $ticket,
+            "/tickets/{$ticket->id}",
+            "SmartDesk ticket #{$ticket->id} updated"
+        );
+    }
 
     return response()->json([
         'message'=>'Ticket updated successfully.',
         'ticket'=>$ticket->fresh([
             'creator',
             'assignedUser',
+            'returnedTo',
             'priority',
             'status',
             'category'
@@ -378,7 +448,7 @@ public function destroy($id)
     if($user->role->role != 'Admin'){
 
         return response()->json([
-            'message'=>'Only administrators can delete tickets.'
+            'message'=>'Only administrators can archive tickets.'
         ],403);
 
     }
@@ -393,10 +463,84 @@ public function destroy($id)
 
     }
 
+    $this->notifications->send(
+        $this->ticketRecipients($ticket, $user->id),
+        'ticket_archived',
+        "Ticket #{$ticket->id} was archived by {$this->activityUserName($user)}.",
+        $ticket,
+        '/tickets',
+        "SmartDesk ticket #{$ticket->id} archived"
+    );
+    ActivityLog::create([
+        'ticketid' => $ticket->id,
+        'user_id' => $user->id,
+        'action' => 'Archived the ticket.',
+        'date' => now(),
+    ]);
     $ticket->delete();
 
     return response()->json([
-        'message'=>'Ticket deleted successfully.'
+        'message'=>'Ticket archived successfully.'
+    ]);
+}
+
+public function archived(Request $request)
+{
+    $request->user()->load('role');
+
+    if ($request->user()->role?->role !== 'Admin') {
+        return response()->json(['message' => 'Only administrators can view archived tickets.'], 403);
+    }
+
+    $query = Ticket::onlyTrashed()
+        ->with(['creator', 'assignedUser', 'returnedTo', 'priority', 'status', 'category']);
+
+    if ($request->filled('search')) {
+        $search = trim((string) $request->query('search'));
+        $query->where(function ($subquery) use ($search) {
+            $subquery->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+            if (ctype_digit($search)) $subquery->orWhere('id', (int) $search);
+        });
+    }
+
+    $tickets = $query
+        ->orderByDesc('deleted_at')
+        ->paginate(min(max((int) $request->query('per_page', 20), 5), 100));
+
+    return response()->json($tickets);
+}
+
+public function restore(Request $request, int $id)
+{
+    $request->user()->load('role');
+
+    if ($request->user()->role?->role !== 'Admin') {
+        return response()->json(['message' => 'Only administrators can restore tickets.'], 403);
+    }
+
+    $ticket = Ticket::onlyTrashed()->findOrFail($id);
+    $ticket->restore();
+
+    ActivityLog::create([
+        'ticketid' => $ticket->id,
+        'user_id' => $request->user()->id,
+        'action' => 'Restored the ticket.',
+        'date' => now(),
+    ]);
+
+    $this->notifications->send(
+        $this->ticketRecipients($ticket, $request->user()->id),
+        'ticket_restored',
+        "Ticket #{$ticket->id} was restored by {$this->activityUserName($request->user())}.",
+        $ticket,
+        "/tickets/{$ticket->id}",
+        "SmartDesk ticket #{$ticket->id} restored"
+    );
+
+    return response()->json([
+        'message' => 'Ticket restored successfully.',
+        'ticket' => $ticket->fresh(['creator', 'assignedUser', 'returnedTo', 'priority', 'status', 'category']),
     ]);
 }
 public function close($id)
@@ -451,11 +595,21 @@ public function close($id)
         ]);
     });
 
+    $this->notifications->send(
+        $this->ticketRecipients($ticket, $user->id),
+        'ticket_closed',
+        "Ticket #{$ticket->id} was resolved and closed by {$this->activityUserName($user)}.",
+        $ticket,
+        "/tickets/{$ticket->id}",
+        "SmartDesk ticket #{$ticket->id} closed"
+    );
+
     return response()->json([
         'message' => 'Ticket closed successfully.',
         'ticket' => $ticket->fresh([
             'creator',
             'assignedUser',
+            'returnedTo',
             'priority',
             'status',
             'category'
@@ -537,7 +691,8 @@ public function returnTicket($id)
     }
 
     DB::transaction(function () use ($ticket, $returnedStatus, $returnTo, $user) {
-        $ticket->assignedto = $returnTo->id;
+        $ticket->assignedto = null;
+        $ticket->returnedto = $returnTo->id;
         $ticket->statusid = $returnedStatus->id;
         $ticket->closed_date = null;
         $ticket->update_date = now();
@@ -552,11 +707,21 @@ public function returnTicket($id)
         ]);
     });
 
+    $this->notifications->send(
+        $this->ticketRecipients($ticket, $user->id),
+        'ticket_returned',
+        "Ticket #{$ticket->id} was returned for review by {$this->activityUserName($user)}.",
+        $ticket,
+        "/tickets/{$ticket->id}",
+        "SmartDesk ticket #{$ticket->id} returned"
+    );
+
     return response()->json([
         'message' => 'Ticket returned successfully.',
         'ticket' => $ticket->fresh([
             'creator',
             'assignedUser',
+            'returnedTo',
             'priority',
             'status',
             'category'
@@ -582,30 +747,7 @@ public function assign(Request $request, $id)
         ], 403);
     }
 
-    $ticket = Ticket::find($id);
-
-    if (!$ticket) {
-        return response()->json([
-            'message' => 'Ticket not found.'
-        ], 404);
-    }
-
     $returnedStatus = Status::where('status', 'Returned')->first();
-
-    // Admins and managers can reassign a Returned ticket only when it was
-    // returned to their own queue. IT agents can still claim only unassigned tickets.
-    $canReassignReturnedTicket =
-        in_array($role, ['Admin', 'Manager']) &&
-        $returnedStatus &&
-        $ticket->assignedto == $user->id &&
-        $ticket->statusid == $returnedStatus->id;
-
-    if ($ticket->assignedto !== null && !$canReassignReturnedTicket) {
-        return response()->json([
-            'message' => 'This ticket is already assigned.'
-        ], 409);
-    }
-
     $inProgressStatus = Status::where('status', 'In Progress')->first();
 
     if (!$inProgressStatus) {
@@ -613,6 +755,8 @@ public function assign(Request $request, $id)
             'message' => 'In Progress status not found.'
         ], 500);
     }
+
+    $assignmentTarget = $user;
 
     if (in_array($role, ['Admin', 'Manager'])) {
         $request->validate([
@@ -625,23 +769,35 @@ public function assign(Request $request, $id)
 
         $agent = User::with('role')->find($request->assignedto);
 
-        if (
-            !$agent ||
-            !$agent->role ||
-            $agent->role->role !== 'IT Support Agent'
-        ) {
+        if (!$agent || !$agent->role || $agent->role->role !== 'IT Support Agent' || $agent->isbanned) {
             return response()->json([
-                'message' => 'The selected user must be an IT Support Agent.'
+                'message' => 'The selected user must be an active IT Support Agent.'
             ], 422);
         }
 
-        $ticket->assignedto = $agent->id;
-    } else {
-        // IT Support Agent claims the ticket for themselves
-        $ticket->assignedto = $user->id;
+        $assignmentTarget = $agent;
     }
 
-    DB::transaction(function () use ($ticket, $inProgressStatus, $user, $role) {
+    $result = DB::transaction(function () use ($id, $returnedStatus, $inProgressStatus, $user, $role, $assignmentTarget) {
+        $ticket = Ticket::lockForUpdate()->find($id);
+
+        if (!$ticket) {
+            return ['error' => 'Ticket not found.', 'status' => 404];
+        }
+
+        $canReassignReturnedTicket = in_array($role, ['Admin', 'Manager'])
+            && $returnedStatus
+            && ($role === 'Admin' || (int) $ticket->returnedto === (int) $user->id)
+            && (int) $ticket->statusid === (int) $returnedStatus->id;
+
+        $isAvailable = $ticket->assignedto === null && $ticket->returnedto === null;
+
+        if (!$isAvailable && !$canReassignReturnedTicket) {
+            return ['error' => 'This ticket is already assigned or awaiting another reviewer.', 'status' => 409];
+        }
+
+        $ticket->assignedto = $assignmentTarget->id;
+        $ticket->returnedto = null;
         $ticket->statusid = $inProgressStatus->id;
         $ticket->update_date = now();
         $ticket->closed_date = null;
@@ -656,7 +812,26 @@ public function assign(Request $request, $id)
                 ? 'Ticket assigned to IT Support Agent.'
                 : 'Ticket claimed by IT Support Agent.'
         ]);
+
+        return ['ticket' => $ticket];
     });
+
+    if (isset($result['error'])) {
+        return response()->json(['message' => $result['error']], $result['status']);
+    }
+
+    $ticket = $result['ticket'];
+    $this->notifications->send(
+        $this->ticketRecipients($ticket, $user->id)
+            ->push($assignmentTarget)
+            ->unique('id')
+            ->values(),
+        'ticket_assigned',
+        "Ticket #{$ticket->id} was assigned to {$this->activityUserName($assignmentTarget)}.",
+        $ticket,
+        "/tickets/{$ticket->id}",
+        "SmartDesk ticket #{$ticket->id} assigned"
+    );
 
     return response()->json([
         'message' => in_array($role, ['Admin', 'Manager'])
@@ -666,6 +841,7 @@ public function assign(Request $request, $id)
         'ticket' => $ticket->fresh([
             'creator',
             'assignedUser',
+            'returnedTo',
             'priority',
             'status',
             'category'
@@ -929,6 +1105,20 @@ public function assign(Request $request, $id)
             'username' => $user->username,
             'role' => $user->role?->role
         ];
+    }
+
+    private function ticketRecipients(Ticket $ticket, int $excludeUserId)
+    {
+        $ticket->loadMissing(['creator', 'assignedUser', 'returnedTo']);
+        $serviceLeads = User::where('isbanned', false)
+            ->whereHas('role', fn ($query) => $query->whereIn('role', ['Admin', 'Manager']))
+            ->get();
+
+        return collect([$ticket->creator, $ticket->assignedUser, $ticket->returnedTo])
+            ->merge($serviceLeads)
+            ->filter(fn ($recipient) => $recipient && $recipient->id !== $excludeUserId)
+            ->unique('id')
+            ->values();
     }
 
     private function activityUserName(?User $user): string

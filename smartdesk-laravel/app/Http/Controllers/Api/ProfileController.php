@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
@@ -31,7 +32,7 @@ class ProfileController extends Controller
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
             'current_password' => ['nullable', 'string'],
-            'password' => ['sometimes', 'required', 'string', 'min:8', 'confirmed'],
+            'password' => ['sometimes', 'required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
         ]);
 
         $emailChanged = array_key_exists('email', $validated)
@@ -65,6 +66,11 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        if ($passwordChanged) {
+            $currentTokenId = $user->currentAccessToken()?->id;
+            $user->tokens()->when($currentTokenId, fn ($query) => $query->where('id', '!=', $currentTokenId))->delete();
+        }
 
         return response()->json([
             'message' => 'Profile updated successfully.',

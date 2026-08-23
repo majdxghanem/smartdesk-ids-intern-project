@@ -48,7 +48,8 @@ function formatDate(value) {
         month: "short",
         day: "numeric",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
+        second: "2-digit"
     });
 }
 
@@ -212,6 +213,9 @@ function TicketComments() {
 
     useEffect(() => {
         loadConversation();
+        const timer = window.setInterval(() => loadConversation(false), 15000);
+
+        return () => window.clearInterval(timer);
     }, [loadConversation]);
 
     useEffect(() => {
@@ -303,7 +307,7 @@ function TicketComments() {
                                 : "Unassigned"}
                         </span>
                         <span className="admin-participant">
-                            Admin participation enabled
+                            Admin and manager participation enabled
                         </span>
                     </div>
                 )}

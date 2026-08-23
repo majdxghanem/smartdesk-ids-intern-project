@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   FaBan,
@@ -46,17 +46,18 @@ function Users() {
   const [busyUserId, setBusyUserId] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState(location.state?.message || "");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
+  const [summary, setSummary] = useState({ total: 0, active: 0, banned: 0 });
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
 
     try {
-      const response = await api.get("/users");
+      const response = await api.get("/users", { params: { search: search || undefined, page, per_page: 20 } });
       setUsers(response.data.users || []);
+      setPagination(response.data.pagination || { current_page: 1, last_page: 1, total: 0 });
+      setSummary(response.data.summary || { total: 0, active: 0, banned: 0 });
       setError("");
     } catch (requestError) {
       setError(
@@ -65,7 +66,12 @@ function Users() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, search]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(loadUsers, search ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [loadUsers, search]);
 
   async function toggleBan(user) {
     const banning = !isBanned(user);
@@ -92,12 +98,8 @@ function Users() {
         banreason: banreason?.trim() || null,
       });
 
-      setUsers((current) =>
-        current.map((item) =>
-          item.id === user.id ? response.data.user : item,
-        ),
-      );
       setMessage(response.data.message);
+      await loadUsers();
     } catch (requestError) {
       setError(
         requestError.response?.data?.message ||
@@ -123,8 +125,8 @@ function Users() {
 
     try {
       const response = await api.delete(`/users/${user.id}`);
-      setUsers((current) => current.filter((item) => item.id !== user.id));
       setMessage(response.data.message);
+      await loadUsers();
     } catch (requestError) {
       setError(
         requestError.response?.data?.message || "Failed to delete the user.",
@@ -133,20 +135,6 @@ function Users() {
       setBusyUserId(null);
     }
   }
-
-  const filteredUsers = useMemo(() => {
-    const term = search.trim().toLowerCase();
-
-    if (!term) return users;
-
-    return users.filter((user) =>
-      [user.firstname, user.username, user.email, roleName(user)]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(term)),
-    );
-  }, [search, users]);
-
-  const bannedCount = users.filter(isBanned).length;
 
   return (
     <DashboardLayout>
@@ -176,15 +164,15 @@ function Users() {
         <div className="users-summary-grid">
           <div className="users-summary-card">
             <span>Total users</span>
-            <strong>{users.length}</strong>
+            <strong>{summary.total}</strong>
           </div>
           <div className="users-summary-card users-summary-active">
             <span>Active users</span>
-            <strong>{users.length - bannedCount}</strong>
+            <strong>{summary.active}</strong>
           </div>
           <div className="users-summary-card users-summary-banned">
             <span>Banned users</span>
-            <strong>{bannedCount}</strong>
+            <strong>{summary.banned}</strong>
           </div>
         </div>
 
@@ -195,7 +183,7 @@ function Users() {
           <div className="users-table-toolbar">
             <div>
               <h2>Current Users</h2>
-              <p>{filteredUsers.length} accounts shown</p>
+              <p>{pagination.total} matching accounts</p>
             </div>
 
             <label className="users-search">
@@ -204,14 +192,14 @@ function Users() {
                 type="search"
                 placeholder="Search name, email, role..."
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
               />
             </label>
           </div>
 
           {loading ? (
             <div className="users-state">Loading users...</div>
-          ) : filteredUsers.length === 0 ? (
+          ) : users.length === 0 ? (
             <div className="users-state">No users match your search.</div>
           ) : (
             <div className="users-table-scroll">
@@ -227,7 +215,7 @@ function Users() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user) => {
+                  {users.map((user) => {
                     const banned = isBanned(user);
                     const isCurrentUser =
                       Number(currentUser?.id) === Number(user.id);
@@ -309,6 +297,7 @@ function Users() {
               </table>
             </div>
           )}
+          {pagination.last_page > 1 && <div className="users-pagination"><span>Page {pagination.current_page} of {pagination.last_page}</span><div><button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><button type="button" disabled={page >= pagination.last_page} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>}
         </section>
       </div>
     </DashboardLayout>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import "../styles/form.css";
@@ -33,15 +33,7 @@ function TicketForm({ mode }) {
 
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        loadDropdowns();
-
-        if (mode === "edit") {
-            loadTicket();
-        }
-    }, []);
-
-    async function loadDropdowns() {
+    const loadDropdowns = useCallback(async () => {
         try {
             const [
                 priorityResponse,
@@ -59,9 +51,9 @@ function TicketForm({ mode }) {
         } catch (error) {
             console.error("Failed to load ticket form options:", error);
         }
-    }
+    }, []);
 
-    async function loadTicket() {
+    const loadTicket = useCallback(async () => {
         try {
             const response = await api.get(`/tickets/${id}`);
             const ticket = response.data;
@@ -79,7 +71,15 @@ function TicketForm({ mode }) {
             );
             navigate("/tickets");
         }
-    }
+    }, [id, navigate]);
+
+    useEffect(() => {
+        loadDropdowns();
+
+        if (mode === "edit") {
+            loadTicket();
+        }
+    }, [loadDropdowns, loadTicket, mode]);
 
     async function handleSubmit(event) {
         event.preventDefault();

@@ -29,6 +29,14 @@ class User extends Authenticatable
         'password'
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'isbanned' => 'boolean',
+            'creationdate' => 'datetime',
+        ];
+    }
+
     public function role()
     {
         return $this->belongsTo(Role::class, 'roleid');
@@ -37,5 +45,10 @@ class User extends Authenticatable
     public function ticketComments()
     {
         return $this->hasMany(TicketComment::class, 'userid');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'userid');
     }
 }

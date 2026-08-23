@@ -7,9 +7,13 @@ use App\Models\Ticket;
 use App\Models\TicketComment;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Services\NotificationService;
 
 class TicketCommentController extends Controller
 {
+    public function __construct(private NotificationService $notifications)
+    {
+    }
     public function index(Request $request, $ticketId)
     {
         $ticket = Ticket::with([
@@ -25,7 +29,7 @@ class TicketCommentController extends Controller
 
         if (!$this->canParticipate($request->user(), $ticket)) {
             return response()->json([
-                'message' => 'Only the ticket creator, assigned IT Support Agent, and administrators can access this conversation.'
+                'message' => 'Only the ticket creator, assigned IT Support Agent, managers, and administrators can access this conversation.'
             ], 403);
         }
 
@@ -54,7 +58,7 @@ class TicketCommentController extends Controller
 
         if (!$this->canParticipate($request->user(), $ticket)) {
             return response()->json([
-                'message' => 'Only the ticket creator, assigned IT Support Agent, and administrators can participate in this conversation.'
+                'message' => 'Only the ticket creator, assigned IT Support Agent, managers, and administrators can participate in this conversation.'
             ], 403);
         }
 
@@ -85,6 +89,25 @@ class TicketCommentController extends Controller
 
         $comment->load('user.role');
 
+        $ticket->loadMissing(['creator', 'assignedUser']);
+        $serviceLeads = User::where('isbanned', false)
+            ->whereHas('role', fn ($query) => $query->whereIn('role', ['Admin', 'Manager']))
+            ->get();
+        $recipients = collect([$ticket->creator, $ticket->assignedUser])
+            ->merge($serviceLeads)
+            ->filter(fn ($recipient) => $recipient && $recipient->id !== $request->user()->id)
+            ->unique('id')
+            ->values();
+        $authorName = $request->user()->firstname ?: $request->user()->username;
+        $this->notifications->send(
+            $recipients,
+            'ticket_comment',
+            "{$authorName} added a comment to ticket #{$ticket->id}.",
+            $ticket,
+            "/tickets/{$ticket->id}/comments",
+            "New comment on SmartDesk ticket #{$ticket->id}"
+        );
+
         return response()->json([
             // Replies are comments too; parentid only links a comment to its parent.
             'message' => 'Comment sent successfully.',
@@ -97,7 +120,7 @@ class TicketCommentController extends Controller
         $user->loadMissing('role');
         $role = $user->role?->role;
 
-        if ($role === 'Admin') {
+        if (in_array($role, ['Admin', 'Manager'], true)) {
             return true;
         }
 
