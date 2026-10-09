@@ -892,3 +892,222 @@ select:focus-visible {
     padding-inline: 12px;
   }
 }
+
+
+/* Accessible light treatments for page-specific accents */
+.profile-hero {
+  border-color: #dbeafe;
+  background: radial-gradient(circle at 86% 12%, rgba(37, 99, 235, 0.07), transparent 18rem), linear-gradient(135deg, #f0f6ff, #ffffff 72%);
+}
+
+.profile-avatar {
+  border-color: #bfdbfe;
+  background: #dbeafe;
+  color: #1d4ed8;
+  box-shadow: none;
+}
+
+.profile-hero p {
+  color: #52627a;
+}
+
+.profile-role {
+  border-color: #dbeafe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.profile-account-status {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.profile-card-heading.security > span {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.profile-save-btn.security {
+  background: #6d28d9;
+  color: #ffffff;
+}
+
+.profile-alert-success,
+.users-alert-success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.profile-alert-error,
+.users-alert-error,
+.assignment-error,
+.ticket-details-error,
+.activity-error,
+.conversation-error,
+.composer-error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.assign-agent-btn {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.assign-agent-btn:hover:not(:disabled) {
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.ticket-attachment-count,
+.reference-heading > span,
+.users-avatar {
+  border-color: #dbeafe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.ticket-attachment-row button {
+  border: 1px solid #dbe3ef;
+  background: #f8fafc;
+  color: #1d4ed8;
+}
+
+.ticket-attachment-row .attachment-delete {
+  color: #b91c1c;
+}
+
+.ticket-page-btn.close-ticket {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.ticket-page-btn.return-ticket {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.ticket-page-btn.comments {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.activity-created .activity-icon,
+.activity-assigned .activity-icon,
+.activity-claimed .activity-icon {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.activity-comment .activity-icon,
+.activity-reply .activity-icon {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.activity-updated .activity-icon {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #854d0e;
+}
+
+.activity-closed .activity-icon {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.activity-returned .activity-icon {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.conversation-messages {
+  background: #f8fafc;
+}
+
+.conversation-participants .admin-participant,
+.comment-avatar {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.comment-message-own .comment-avatar {
+  border-color: #bfdbfe;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.comment-message-own .comment-bubble {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #243247;
+}
+
+.users-summary-active {
+  background: linear-gradient(135deg, #f0fdf4, #ffffff 72%);
+}
+
+.users-summary-banned {
+  background: linear-gradient(135deg, #fef2f2, #ffffff 72%);
+}
+
+.users-summary-banned strong {
+  color: #991b1b;
+}
+
+.users-role-badge {
+  border-color: #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
+}
+
+.users-status-badge.active {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.users-status-badge.banned {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.users-icon-btn.ban {
+  color: #9a3412;
+}
+
+.users-icon-btn.delete {
+  color: #b91c1c;
+}
+
+.ticket-toggle button.active,
+.sort-newest-btn.active {
+  color: #1d4ed8;
+}
+
+.dashboard-activity-returned .dashboard-activity-icon {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+@media (max-width: 980px) {
+  .sidebar {
+    background: #ffffff;
+  }
+}
