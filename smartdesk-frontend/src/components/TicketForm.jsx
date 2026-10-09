@@ -58,7 +58,7 @@ function TicketForm({ mode }) {
 
     const loadTicket = useCallback(async () => {
         try {
-            const response = await api.get(\`/tickets/\${id}\`);
+            const response = await api.get(`/tickets/${id}`);
             const ticket = response.data;
             setTitle(ticket.title || "");
             setDescription(ticket.description || "");
@@ -92,7 +92,7 @@ function TicketForm({ mode }) {
                 await api.post("/tickets", data);
                 alert("Ticket created successfully!");
             } else {
-                await api.put(\`/tickets/\${id}\`, data);
+                await api.put(`/tickets/${id}`, data);
                 alert("Ticket updated successfully!");
             }
 
@@ -115,7 +115,7 @@ function TicketForm({ mode }) {
             <header className="ticket-compose-heading">
                 <div>
                     <div className="compose-breadcrumb">
-                        <span>REQUEST CENTER</span><i />{isCreate ? "NEW REQUEST" : \`TICKET #\${id}\`}
+                        <span>REQUEST CENTER</span><i />{isCreate ? "NEW REQUEST" : `TICKET #${id}`}
                     </div>
                     <h1>{isCreate ? "Create a request" : "Update request details"}</h1>
                     <p>
@@ -126,7 +126,7 @@ function TicketForm({ mode }) {
                 </div>
                 <div className="compose-heading-mark">
                     <FaClipboardList />
-                    <span>{isCreate ? "NEW ENTRY" : \`RECORD #\${id}\`}</span>
+                    <span>{isCreate ? "NEW ENTRY" : `RECORD #${id}`}</span>
                 </div>
             </header>
 
@@ -270,7 +270,7 @@ function TicketForm({ mode }) {
                         </div>
                         <div className="ticket-preview-document">
                             <div className="preview-document-top">
-                                <span>{isCreate ? "DRAFT REQUEST" : \`TICKET #\${id}\`}</span>
+                                <span>{isCreate ? "DRAFT REQUEST" : `TICKET #${id}`}</span>
                                 <span className="preview-document-dot" />
                             </div>
                             <h3>{title.trim() || "Your request title"}</h3>
