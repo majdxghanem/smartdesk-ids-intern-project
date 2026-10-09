@@ -250,7 +250,7 @@ function TicketDetails() {
             ) : error ? (
                 <div className="ticket-details-error">{error}</div>
             ) : (
-                <>
+                <div className="ticket-workspace-grid">
                     <div className="ticket-details-card">
                         <div className="ticket-details-grid">
                             <div className="ticket-detail-item">
@@ -449,7 +449,7 @@ function TicketDetails() {
                             <FaHistory /> Activity
                         </button>
                     </div>
-                </>
+                </div>
             )}
         </DashboardLayout>
     );
