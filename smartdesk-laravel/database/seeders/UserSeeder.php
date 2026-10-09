@@ -15,15 +15,15 @@ class UserSeeder extends Seeder
         $adminPassword = config('smartdesk.seed.admin_password');
         $demoPassword = config('smartdesk.seed.demo_password');
 
-        if (! is_string($adminPassword) || strlen($adminPassword) < 12) {
+        if (! is_string($adminPassword) || strlen($adminPassword) < 8) {
             throw new InvalidArgumentException(
-                'Set SMARTDESK_ADMIN_PASSWORD to a unique password of at least 12 characters before seeding.'
+                'Set SMARTDESK_ADMIN_PASSWORD to a unique password of at least 8 characters before seeding.'
             );
         }
 
-        if ($demoPassword !== null && (! is_string($demoPassword) || strlen($demoPassword) < 12)) {
+        if ($demoPassword !== null && (! is_string($demoPassword) || strlen($demoPassword) < 8)) {
             throw new InvalidArgumentException(
-                'SMARTDESK_DEMO_PASSWORD must be blank or contain at least 12 characters.'
+                'SMARTDESK_DEMO_PASSWORD must be blank or contain at least 8 characters.'
             );
         }
 
