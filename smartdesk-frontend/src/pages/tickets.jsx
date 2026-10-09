@@ -124,7 +124,7 @@ function Tickets() {
         if (!confirmed) return;
 
         try {
-            await api.delete(\`/tickets/\${id}\`);
+            await api.delete(`/tickets/${id}`);
             alert("Ticket archived successfully.");
             loadTickets();
         } catch (error) {
@@ -135,7 +135,7 @@ function Tickets() {
 
     async function restoreTicket(id) {
         try {
-            const response = await api.put(\`/tickets/\${id}/restore\`);
+            const response = await api.put(`/tickets/${id}/restore`);
             alert(response.data.message);
             loadTickets();
         } catch (error) {
@@ -145,7 +145,7 @@ function Tickets() {
 
     async function claimTicket(id) {
         try {
-            const response = await api.put(\`/tickets/\${id}/assign\`);
+            const response = await api.put(`/tickets/${id}/assign`);
             alert(response.data.message);
             loadTickets();
         } catch (error) {
@@ -318,7 +318,7 @@ function Tickets() {
 
                         <button
                             type="button"
-                            className={\`sort-newest-btn queue-sort-button \${sortNewest ? "active" : ""}\`}
+                            className={`sort-newest-btn queue-sort-button ${sortNewest ? "active" : ""}`}
                             onClick={() => { setSortNewest((current) => !current); setPage(1); }}
                             aria-pressed={sortNewest}
                         >
@@ -337,12 +337,12 @@ function Tickets() {
                     <div className="queue-results-heading">
                         <div>
                             <span className="panel-kicker">RESULTS</span>
-                            <h2>{loading ? "Updating request list..." : \`\${tickets.length} on this page\`}</h2>
+                            <h2>{loading ? "Updating request list..." : `${tickets.length} on this page`}</h2>
                         </div>
                         <span className="queue-result-range">
                             {pagination.total === 0
                                 ? "No records"
-                                : \`Page \${pagination.current_page} of \${pagination.last_page}\`}
+                                : `Page ${pagination.current_page} of ${pagination.last_page}`}
                         </span>
                     </div>
 
@@ -385,7 +385,7 @@ function Tickets() {
 
                                         <div className="ticket-queue-main">
                                             {canView ? (
-                                                <button type="button" className="ticket-queue-title" onClick={() => navigate(\`/tickets/\${ticket.id}\`)}>
+                                                <button type="button" className="ticket-queue-title" onClick={() => navigate(`/tickets/${ticket.id}`)}>
                                                     {ticket.title || "Untitled request"} <FaArrowRight />
                                                 </button>
                                             ) : (
@@ -401,23 +401,23 @@ function Tickets() {
                                         </div>
 
                                         <div className="ticket-queue-labels">
-                                            <span className={\`queue-status-pill status-\${status.toLowerCase().replace(/[^a-z]+/g, "-")}\`}>{status}</span>
-                                            <span className={\`queue-priority-pill priority-\${priority.toLowerCase()}\`}>{priority}</span>
+                                            <span className={`queue-status-pill status-${status.toLowerCase().replace(/[^a-z]+/g, "-")}`}>{status}</span>
+                                            <span className={`queue-priority-pill priority-${priority.toLowerCase()}`}>{priority}</span>
                                         </div>
 
                                         <div className="ticket-queue-actions">
                                             {canView && (
-                                                <button type="button" className="queue-action-btn" title="View request" aria-label={\`View ticket \${ticket.id}\`} onClick={() => navigate(\`/tickets/\${ticket.id}\`)}>
+                                                <button type="button" className="queue-action-btn" title="View request" aria-label={`View ticket ${ticket.id}`} onClick={() => navigate(`/tickets/${ticket.id}`)}>
                                                     <FaEye />
                                                 </button>
                                             )}
                                             {ticketView !== "archived" && canEditTicket(ticket) && (
-                                                <button type="button" className="queue-action-btn" title="Edit request" aria-label={\`Edit ticket \${ticket.id}\`} onClick={() => navigate(\`/tickets/edit/\${ticket.id}\`)}>
+                                                <button type="button" className="queue-action-btn" title="Edit request" aria-label={`Edit ticket ${ticket.id}`} onClick={() => navigate(`/tickets/edit/${ticket.id}`)}>
                                                     <FaEdit />
                                                 </button>
                                             )}
                                             {role === "Admin" && ticketView !== "archived" && (
-                                                <button type="button" className="queue-action-btn queue-action-danger" title="Archive request" aria-label={\`Archive ticket \${ticket.id}\`} onClick={() => deleteTicket(ticket.id)}>
+                                                <button type="button" className="queue-action-btn queue-action-danger" title="Archive request" aria-label={`Archive ticket ${ticket.id}`} onClick={() => deleteTicket(ticket.id)}>
                                                     <FaTrash />
                                                 </button>
                                             )}
@@ -426,16 +426,16 @@ function Tickets() {
                                                     type="button"
                                                     className="queue-action-btn queue-action-assign"
                                                     title={role === "IT Support Agent" ? "Claim request" : "Assign request"}
-                                                    aria-label={\`Assign ticket \${ticket.id}\`}
+                                                    aria-label={`Assign ticket ${ticket.id}`}
                                                     onClick={() => role === "IT Support Agent"
                                                         ? claimTicket(ticket.id)
-                                                        : navigate(\`/tickets/assign/\${ticket.id}\`)}
+                                                        : navigate(`/tickets/assign/${ticket.id}`)}
                                                 >
                                                     <FaUserPlus />
                                                 </button>
                                             )}
                                             {role === "Admin" && ticketView === "archived" && (
-                                                <button type="button" className="queue-action-btn queue-action-restore" title="Restore request" aria-label={\`Restore ticket \${ticket.id}\`} onClick={() => restoreTicket(ticket.id)}>
+                                                <button type="button" className="queue-action-btn queue-action-restore" title="Restore request" aria-label={`Restore ticket ${ticket.id}`} onClick={() => restoreTicket(ticket.id)}>
                                                     <FaUndo />
                                                 </button>
                                             )}
