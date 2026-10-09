@@ -226,8 +226,8 @@
 .comment-message-own .comment-bubble {
   border-color: rgba(96, 165, 250, 0.28);
   border-radius: 14px 5px 14px 14px;
-  background: linear-gradient(135deg, #2458bf, #1a489e);
-  color: #ffffff;
+  background: #eaf2ff;
+  color: #23334a;
 }
 
 .comment-bubble p {
