@@ -6,6 +6,7 @@ import App from './App';
 
 import './styles/global.css';
 import './styles/redesign.css';
+import './styles/graphite.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
