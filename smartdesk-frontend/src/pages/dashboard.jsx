@@ -46,7 +46,7 @@ function formatActivityDate(value) {
 
 function displayName(user) {
   if (!user) return "System";
-  return user.firstname || user.username || \`User #\${user.id}\`;
+  return user.firstname || user.username || `User #${user.id}`;
 }
 
 function lowerFirst(value) {
@@ -246,7 +246,7 @@ function Dashboard() {
                     const status = ticket.status?.status || "Not set";
                     const priority = ticket.priority?.priority || "Not set";
                     return (
-                      <Link className="overview-request-row" key={ticket.id} to={\`/tickets/\${ticket.id}\`}>
+                      <Link className="overview-request-row" key={ticket.id} to={`/tickets/${ticket.id}`}>
                         <span className="request-id-block">
                           <small>REQUEST</small>
                           <strong>#{ticket.id}</strong>
@@ -256,8 +256,8 @@ function Dashboard() {
                           <span>{ticket.category?.category || "Uncategorised"} <i /> {formatActivityDate(ticket.creation_date)}</span>
                         </span>
                         <span className="request-row-state">
-                          <span className={\`request-status-pill status-\${status.toLowerCase().replace(/[^a-z]+/g, "-")}\`}>{status}</span>
-                          <small className={\`request-priority priority-\${priority.toLowerCase()}\`}>{priority} priority</small>
+                          <span className={`request-status-pill status-${status.toLowerCase().replace(/[^a-z]+/g, "-")}`}>{status}</span>
+                          <small className={`request-priority priority-${priority.toLowerCase()}`}>{priority} priority</small>
                         </span>
                         <span className="request-row-arrow"><FaArrowRight /></span>
                       </Link>
@@ -301,8 +301,8 @@ function Dashboard() {
                               <strong>{displayName(activity.user)}</strong>{" "}
                               {lowerFirst(activity.action)}
                             </p>
-                            <Link to={activity.ticket?.id ? \`/tickets/\${activity.ticket.id}\` : "/tickets"}>
-                              {activity.ticket?.title || \`Ticket #\${activity.ticket?.id || "—"}\`}
+                            <Link to={activity.ticket?.id ? `/tickets/${activity.ticket.id}` : "/tickets"}>
+                              {activity.ticket?.title || `Ticket #${activity.ticket?.id || "—"}`}
                               <FaArrowRight />
                             </Link>
                           </div>
@@ -335,7 +335,7 @@ function Dashboard() {
                 aria-valuemin={0}
                 aria-valuemax={100}
               >
-                <span style={{ width: \`\${closedPercent}%\` }} />
+                <span style={{ width: `${closedPercent}%` }} />
               </div>
               <div className="resolution-legend">
                 <span>{closedPercent}% closed</span>
