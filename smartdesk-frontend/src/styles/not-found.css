@@ -5,7 +5,7 @@
   justify-content: center;
   flex-direction: column;
   padding: 32px;
-  background: radial-gradient(circle at top, #102e53, #06101f 55%);
+  background: radial-gradient(circle at top, #eaf2ff, #f4f7fb 65%);
   color: var(--foreground);
   text-align: center;
 }
