@@ -152,6 +152,16 @@ function Users() {
             </div>
           </div>
 
+          <div className="users-header-actions">
+            <label className="users-search">
+              <FaSearch />
+              <input
+                type="search"
+                placeholder="Search name, email, role..."
+                value={search}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+              />
+            </label>
           <button
             type="button"
             className="users-primary-btn"
@@ -159,6 +169,7 @@ function Users() {
           >
             <FaUserPlus /> Create User
           </button>
+          </div>
         </div>
 
         <div className="users-summary-grid">
@@ -186,15 +197,7 @@ function Users() {
               <p>{pagination.total} matching accounts</p>
             </div>
 
-            <label className="users-search">
-              <FaSearch />
-              <input
-                type="search"
-                placeholder="Search name, email, role..."
-                value={search}
-                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
-              />
-            </label>
+
           </div>
 
           {loading ? (
