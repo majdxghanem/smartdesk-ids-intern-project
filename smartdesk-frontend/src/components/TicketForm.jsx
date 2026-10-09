@@ -150,6 +150,7 @@ function TicketForm({ mode }) {
                 </p>
             )}
 
+            <div className="ticket-form-primary-fields">
             <div className="form-group">
                 <label>Title</label>
 
@@ -174,6 +175,9 @@ function TicketForm({ mode }) {
                 />
             </div>
 
+            </div>
+
+            <aside className="ticket-form-classification">
             <div className="form-row">
                 <div className="form-group">
                     <label>Category</label>
@@ -240,6 +244,8 @@ function TicketForm({ mode }) {
                     </div>
                 )}
             </div>
+
+            </aside>
 
             <div className="ticket-form-actions">
                 <button

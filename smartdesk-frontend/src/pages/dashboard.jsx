@@ -134,6 +134,7 @@ function Dashboard() {
           </p>
         </div>
 
+        <section className="dashboard-summary-rail" aria-label="Ticket statistics">
         <div className="dashboard-cards">
           <StatisticCard
             title="Open Tickets"
@@ -164,6 +165,9 @@ function Dashboard() {
           />
         </div>
 
+        </section>
+
+        <div className="dashboard-lower-grid">
         <section className="dashboard-recent-card">
           <div className="dashboard-activity-header">
             <div><div className="dashboard-activity-title"><FaTicketAlt /><h2>Recent Tickets</h2></div><p>The five newest requests in your current workspace.</p></div>
@@ -245,6 +249,7 @@ function Dashboard() {
             )}
           </section>
         )}
+        </div>
       </div>
     </DashboardLayout>
   );
