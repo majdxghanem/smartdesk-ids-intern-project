@@ -87,7 +87,7 @@ function Navbar() {
     const markRead = async (notification) => {
         if (!notification.read_at) {
             try {
-                await api.put(\`/notifications/\${notification.id}/read\`);
+                await api.put(`/notifications/${notification.id}/read`);
                 setNotifications((current) => current.map((item) =>
                     item.id === notification.id
                         ? { ...item, read_at: new Date().toISOString() }
@@ -179,7 +179,7 @@ function Navbar() {
                                     <Link
                                         key={item.id}
                                         to={item.action_url || "/dashboard"}
-                                        className={\`notification-item \${item.read_at ? "" : "is-unread"}\`}
+                                        className={`notification-item ${item.read_at ? "" : "is-unread"}`}
                                         onClick={() => markRead(item)}
                                     >
                                         <span className="notification-item-dot" />
