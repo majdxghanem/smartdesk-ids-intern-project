@@ -49,15 +49,36 @@ npm run dev
 
 Open `http://localhost:5173`. Before running the seeders, set a unique password of at least 12 characters in `SMARTDESK_ADMIN_PASSWORD`. The seed administrator is `admin@smartdesk.local`. `SMARTDESK_DEMO_PASSWORD` is optional; when blank, demo accounts receive a random, non-recoverable password.
 
-## Gmail configuration
+## Gmail configuration and password-recovery email testing
 
-1. Enable two-step verification on the Google account that will send SmartDesk email.
-2. Create a Google App Password for Mail.
-3. In `smartdesk-laravel/.env`, set `MAIL_USERNAME`, `MAIL_PASSWORD`, and `MAIL_FROM_ADDRESS`. Paste the App Password without sharing or committing it.
-4. Keep `MAIL_HOST=smtp.gmail.com` and `MAIL_PORT=587`.
-5. Clear cached Laravel configuration after a change: `php artisan config:clear`.
+SmartDesk sends password-reset codes through Laravel's mailer. **The UI and backend cannot deliver mail unless the backend machine is configured with valid SMTP credentials.** These values belong in the local `smartdesk-laravel/.env` file, which is excluded from Git; never commit an App Password.
 
-The system catches and logs mail transport failures so a Gmail outage does not roll back a valid ticket operation. Password reset responses intentionally do not reveal whether an email belongs to an account.
+1. Enable 2-Step Verification on the Gmail account used as the SmartDesk sender. If supported by your account, create a dedicated Google App Password from [Google App Passwords](https://myaccount.google.com/apppasswords). Gmail SMTP does **not** accept your normal Gmail password here.
+2. In `smartdesk-laravel/.env`, configure:
+
+   ```dotenv
+   MAIL_MAILER=smtp
+   MAIL_SCHEME=null
+   MAIL_HOST=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USERNAME=your_sender@gmail.com
+   MAIL_PASSWORD=your_16_character_app_password
+   MAIL_FROM_ADDRESS=your_sender@gmail.com
+   MAIL_FROM_NAME="SmartDesk"
+   ```
+
+   Set `MAIL_USERNAME` and `MAIL_FROM_ADDRESS` to the Gmail address sending mail. Replace `MAIL_PASSWORD` with the real App Password, removing display spaces. If that password contains dotenv-special characters, quote the value appropriately.
+3. From the Laravel directory, refresh the configuration and run the non-sensitive SMTP test:
+
+   ```bash
+   php artisan optimize:clear
+   php artisan smartdesk:mail-check an_address_you_control@example.com
+   ```
+
+4. Confirm that the test reaches your inbox (check spam/junk). SMTP acceptance alone is not proof of inbox delivery. Then test **Forgot password** with an active SmartDesk user whose registered email you can access.
+5. If the test fails, inspect the console output and `smartdesk-laravel/storage/logs/laravel.log`. Common problems: missing or revoked App Password, incorrect Gmail sender address, blocked outgoing port 587, or stale Laravel configuration. Don't share the App Password or application logs containing secrets.
+
+In local development, a failed password-reset email request now reports a configuration/delivery error rather than silently advancing to the code-entry screen. For production, the endpoint retains its generic response so callers cannot use password recovery to identify registered accounts. Failed sends do not invalidate an older usable reset code. Ticket-notification delivery failures remain logged separately to avoid rolling back valid ticket operations.
 
 ## Verification
 
