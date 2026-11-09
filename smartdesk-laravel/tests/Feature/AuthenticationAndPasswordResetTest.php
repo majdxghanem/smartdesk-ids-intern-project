@@ -60,6 +60,23 @@ class AuthenticationAndPasswordResetTest extends TestCase
         $this->postJson('/api/forgot-password/reset', $payload)->assertUnprocessable();
     }
 
+    public function test_failed_email_send_removes_new_code_without_invalidating_previous_code(): void
+    {
+        $roleId = DB::table('roles')->insertGetId(['role' => 'Employee']);
+        $user = $this->createUser($roleId, 'retry@smartdesk.test');
+
+        Mail::fake();
+        $this->postJson('/api/forgot-password/request-code', ['email' => $user->email])->assertOk();
+        $original = PasswordResetCode::firstOrFail();
+
+        Mail::shouldReceive('to')->once()->andThrow(new \RuntimeException('SMTP unavailable'));
+        // Testing uses a generic response; production also conceals account existence.
+        $this->postJson('/api/forgot-password/request-code', ['email' => $user->email])->assertOk();
+
+        $this->assertSame(1, PasswordResetCode::count());
+        $this->assertNull($original->fresh()->used_at);
+    }
+
     private function createUser(int $roleId, string $email, bool $banned = false): User
     {
         return User::create([
