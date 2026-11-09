@@ -15,11 +15,18 @@ use Illuminate\Validation\Rules\Password;
 
 class PasswordResetController extends Controller
 {
-    private const GENERIC_MESSAGE = 'If an active account matches that email, a secure code has been sent.';
+    private const GENERIC_MESSAGE = 'If an active account matches that email, you will receive a secure code shortly.';
 
     public function requestCode(Request $request)
     {
         $validated = $request->validate(['email' => ['required', 'email', 'max:255']]);
+
+        // Report incomplete SMTP setup locally, without disclosing account existence.
+        if (app()->environment('local') && ! $this->isSmtpConfigured()) {
+            return response()->json([
+                'message' => 'Email delivery is not configured. Check the Laravel SMTP settings and clear the configuration cache.',
+            ], 503);
+        }
         $email = mb_strtolower(trim($validated['email']));
         $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
@@ -27,10 +34,8 @@ class PasswordResetController extends Controller
             return response()->json(['message' => self::GENERIC_MESSAGE]);
         }
 
-        PasswordResetCode::where('email', $email)->whereNull('used_at')->update(['used_at' => now()]);
-
         $code = (string) random_int(100000, 999999);
-        PasswordResetCode::create([
+        $resetCode = PasswordResetCode::create([
             'email' => $email,
             'code_hash' => Hash::make($code),
             'expires_at' => now()->addMinutes(10),
@@ -39,13 +44,46 @@ class PasswordResetController extends Controller
         try {
             Mail::to($user->email)->send(new PasswordResetCodeMail($user, $code));
         } catch (\Throwable $exception) {
+            // A failed send must not invalidate an earlier usable reset code.
+            $resetCode->delete();
             Log::error('Password reset email delivery failed.', [
                 'user_id' => $user->id,
                 'exception' => $exception->getMessage(),
             ]);
+
+            // Local development feedback only; production responses avoid user enumeration.
+            if (app()->environment('local')) {
+                return response()->json([
+                    'message' => 'Could not send the reset email. Check SMTP settings and storage/logs/laravel.log.',
+                ], 503);
+            }
+
+            return response()->json(['message' => self::GENERIC_MESSAGE]);
         }
 
+        // Retire older codes only after the email transport accepts the new one.
+        PasswordResetCode::where('email', $email)
+            ->where('id', '!=', $resetCode->id)
+            ->whereNull('used_at')
+            ->update(['used_at' => now()]);
+
         return response()->json(['message' => self::GENERIC_MESSAGE]);
+    }
+
+    private function isSmtpConfigured(): bool
+    {
+        if (config('mail.default') !== 'smtp') {
+            return false;
+        }
+
+        foreach (['mail.mailers.smtp.host', 'mail.mailers.smtp.username',
+            'mail.mailers.smtp.password', 'mail.from.address'] as $setting) {
+            if (blank(config($setting))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function reset(Request $request)
